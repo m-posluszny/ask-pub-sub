@@ -44,7 +44,7 @@ services:
     
             
   subscriber:
-    build: ./client/
+    build: ./subscriber/
     container_name: subscriber
     hostname: subscriber
     environment:
@@ -55,4 +55,4 @@ services:
       - DB_PWD=123456
       - DB_IP=database_sql
       - DB_PORT=3306
-    command: "python ./client.py"
+    command: "python ./subscriber.py"
