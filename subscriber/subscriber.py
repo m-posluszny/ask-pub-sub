@@ -2,12 +2,12 @@ from confluent_kafka import Consumer, TIMESTAMP_NOT_AVAILABLE
 from sql_handler import MySqlDB
 from os import environ
 import datetime
+from time import time
 
 class SubscriberService:
 
-    def __init__(self, topic, hostname, sql_ip, sql_port, sql_user, sql_pwd):
-        self.db = MySqlDB(sql_ip, sql_port, sql_user, sql_pwd)
-        self.db.exec_query("use clientstat")
+    def __init__(self, topic, hostname, sql_ip, sql_port, sql_user, sql_pwd, db_timeout=300):
+        self.wait_for_db(sql_ip, sql_port, sql_user, sql_pwd, db_timeout)
         self.topic = topic
         self.conf = {
             'bootstrap.servers': hostname,
@@ -20,6 +20,18 @@ class SubscriberService:
         self.counter = 0
         self.sum = 0
 
+    def wait_for_db(self, sql_ip, sql_port, sql_user, sql_pwd, db_timeout):
+        dt = 0
+        st = time()
+        while (dt < db_timeout):
+            try:
+                self.db = MySqlDB(sql_ip, sql_port, sql_user, sql_pwd)
+                self.db.exec_query("use clientstat")
+                return
+            except:
+                dt = time() - st 
+        raise TimeoutError
+            
     def shutdown(self):
         self.running = False
     
