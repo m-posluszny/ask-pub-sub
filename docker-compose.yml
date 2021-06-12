@@ -1,58 +1,76 @@
 version: '3'
 services:
   zookeeper:
+    #obraz zookeepera
     image: confluentinc/cp-zookeeper:6.1.1
     hostname: zookeeper
     container_name: zookeeper
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_CLIENT_PORT: 2181 #port zookeepera
+      ZOOKEEPER_TICK_TIME: 2000 #długość pojedynczego ticka w milisekundach
+      #stanowi bazową jednostkę czasu, np timeout odbędzie się po dwóch tikach
+      #hearbeat zostanie wysłany po jednym ticku
+
   kafka-broker:
+    #obraz kafki
     image: confluentinc/cp-kafka:6.1.1
-    hostname: broker
+    hostname: broker #nazwa hosta, używana przy połączeniach
     container_name: broker
     depends_on:
-    - zookeeper
+    - zookeeper #zależność od kontenera zookeeper jest to baza danych dla brokera
     ports:
-    - "29092:29092"
+    - "29092:29092" #port zmapowany do portu hosta, daje nam dostęp do brokera kafki z naszego komputera
     environment:
-      KAFKA_BROKER_ID: 101
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_BROKER_ID: 101 #id brokera
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181' #nazwa host i port zookeepera
+      #zdefiniowanie kluczy nazw wartości  listenerów
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      #zdefiniowanie kluczy z adresami brokera jako wartości
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:29092
+      #ilość replikacji dla wiadomości, w tym wypadku broker przechowa 1 kopię wiadomości
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # czas jaki odczeka koordynator grupy na dołączenie subskrybujących przed 
+      # dokonaniem balansowania grup
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
   publisher:
+    #kontener publishera
     container_name: publisher
-    hostname: publisher
+    hostname: publisher #nazwa hosta, która zostanie użyta przy połączeniach
     build: ./publisher/
     environment:
+      #dostęp do brokera
       - BROKER_IP=broker
       - BROKER_PORT=9092
+      #temat na który wiadomości będa publikowane
       - TOPIC=statistics
+    #komenda startowa serwisu, uruchomienie publishera
     command: "python ./publisher.py"
     
 
   database:
+    #kontener bazy danych
     container_name: database_sql
-    hostname: database_sql
+    hostname: database_sql #nazwa hosta, która zostanie użyta przy połączeniach
     build: ./db/
+    #wymagana zmienna środowiskoa, hasło dla roota
     environment:
       MYSQL_ROOT_PASSWORD: "root"
-    ports:
-      - "3306:3306"
     
             
   subscriber:
     build: ./subscriber/
     container_name: subscriber
-    hostname: subscriber
-    environment:
-      - TOPIC=statistics
-      - BROKER_IP=broker
+    hostname: subscriber #nazwa hosta, która zostanie użyta przy połączeniach
+    environment: #zmienne środowiskowe
+      - TOPIC=statistics #temat
+      #dostęp do brokera
+      - BROKER_IP=broker 
       - BROKER_PORT=9092
+      #dostęp do bazy danych
       - DB_LOGIN=clientstat
       - DB_PWD=123456
       - DB_IP=database_sql
       - DB_PORT=3306
+    #komenda startowa
     command: "python ./subscriber.py"
