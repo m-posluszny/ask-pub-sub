@@ -42,9 +42,8 @@ class PublisherService:
                 i += 1
                 if i > 1000000:
                     i = 0 
-        except:
-            pass
-        self.producer.flush()
+        finally:
+            self.producer.flush()
 
 def main():
     """
